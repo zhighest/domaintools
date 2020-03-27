@@ -10,7 +10,13 @@ import dns.resolver
 import dns.query
 import logging
 import re
-from urlparse import urlparse
+import sys
+
+if sys.version_info < (3, 0):
+    from urlparse import urlparse
+else:
+    from urllib.parse import urlparse
+
 try:
     from .data import TLDS
 except:
@@ -50,15 +56,20 @@ class Domain(object):
     :param domain_string: the domain name to parse.
     :type domain_string: unicode
     '''
-    __whitespace_regex = re.compile(ur'\s+')
+    __whitespace_regex = re.compile(r'\s+')
+    __domain_part_regex = re.compile(r'(?!-)[A-Z\d-]{1,63}(?<!-)$', re.IGNORECASE)
 
-    __domain_part_regex = re.compile(ur'(?!-)[A-Z\d\-_]{1,63}(?<!-)$', re.IGNORECASE)
+    try:
+        __whitespace_regex = __whitespace_regex.decode('raw_unicode_escape')
+        __domain_part_regex = __domain_part_regex.decode('raw_unicode_escape')
+    except AttributeError:
+        pass
 
     def __init__(self, domain_string, allow_private=False):
         if not TLDS:
             raise Exception('TLDs could not be loaded from data.py. To create '
                 'the file, run build_data_file.py') 
-        if u':' in domain_string:
+        if ':' in domain_string:
             # strip out port numbers
             domain_string, port = domain_string.rsplit(u':', 1)
         self.allow_private = allow_private
@@ -67,7 +78,7 @@ class Domain(object):
             self.__full_domain = domain_string.lower().encode('idna')
         except:
             self.__full_domain = domain_string.lower()
-        self.__domain_parts = self.__full_domain.split('.')
+        self.__domain_parts = str(self.__full_domain, 'utf8').split('.')
         if self.__domain_parts[-1] == u'':
             self.__domain_parts.pop()
 
